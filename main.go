@@ -1,9 +1,10 @@
 package main
 
 import (
+	"chess2/analytics"
 	"chess2/engine"
-	"fmt"
-	"sort"
+	"math/rand"
+	"runtime"
 	"time"
 )
 
@@ -13,35 +14,24 @@ const (
 )
 
 func main() {
+	count := 1_000_000
+	workers := runtime.NumCPU()
+	size := 10
+	randomSimulation := analytics.NewSimulation("random", size)
+	randomSimulation.Run(
+		count,
+		workers,
+		func() *engine.Board {
+			return engine.InitBoard(size)
+		},
+		func(board *engine.Board) {
+			board.SimRandom()
+		},
+	)
+	randomSimulation.Print()
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	var results []*engine.Board
-	for i := 0; i < Counts-1; i++ {
-		results = append(results, engine.InitBoard(Size))
-	}
-	var best *engine.Board
-	var b int8
-	score := make(map[int8]int)
-	start := time.Now()
-	for _, res := range results {
-		res.SimRandom()
-		if res.Step > b {
-			best = res
-			b = res.Step
-		}
-		score[res.Step]++
-	}
-	fmt.Println("Time elapsed: ", time.Since(start))
-	fmt.Println("Time for 1 simulations: ", time.Since(start)/Counts)
-	fmt.Println("Всего ферзей:", best.Step)
-	fmt.Println("Порядок расстановки", best.Ranking)
-	best.Print()
-	keys := make([]int, 0, len(score))
-	for k := range score {
-		keys = append(keys, int(k))
-	}
-	sort.Ints(keys)
-	for _, k := range keys {
-		fmt.Println("Ферзей:", k, "Результатов:", score[int8(k)], "Доля:", (float32(score[int8(k)])/Counts)*100, "%")
-	}
-
+	board := engine.InitBoard(size)
+	board.SimAnnealing(rng, 10_000, 10, 0.01)
+	board.Print()
 }
